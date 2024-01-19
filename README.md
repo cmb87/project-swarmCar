@@ -8,4 +8,9 @@
 ![Wemos D1 Mini](./imgs/WeMos-D1-Mini-Pinout.webp)
 
 
+![Wiring](./construction/pcb/version0/version0_bb.png)
+
+
+
 https://forum.fritzing.org/t/h-bridge-with-l298n-motor-driver/7711
+https://forum.fritzing.org/t/gy273-qmc5883l-triple-axis-magnetometer-breakout/6106
