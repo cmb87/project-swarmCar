@@ -7,6 +7,7 @@
 
 ![Wemos D1 Mini](./imgs/WeMos-D1-Mini-Pinout.webp)
 
+## Wiring
 
 ![Wiring](./construction/pcb/version0/version0_bb.png)
 
