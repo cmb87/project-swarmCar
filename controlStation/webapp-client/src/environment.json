@@ -1,0 +1,16 @@
+{
+    "apiKey": "lol",
+    "apiBase": "/",
+    "uploadAllowedFileTypes": ["JPG", "PNG", "JPEG"],
+    "maxFilesUpload": 100,
+    "api": {
+    },
+    "routes": [
+        {
+            "label": "Home",
+            "path": "/home"
+        }
+
+    ]
+
+}

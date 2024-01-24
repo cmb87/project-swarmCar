@@ -68,8 +68,8 @@ def joystick_example():
 
             try:
                 # Dummy data to send to Wemos D1 Mini
-                motorRightPwm = int(125*(-axes[1] - 0.5*axes[0]))
-                motorLeftPwm =  int(125*(-axes[1] + 0.5*axes[0]))
+                motorRightPwm = int(125*(-axes[1] - 0.1*axes[0]))
+                motorLeftPwm =  int(125*(-axes[1] + 0.1*axes[0]))
 
                 # Send data to Wemos D1 Mini
                 send_data(client_socket, motorRightPwm, motorLeftPwm)
