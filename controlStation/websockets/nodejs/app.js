@@ -17,6 +17,7 @@ const querystring = require('querystring');
 
 
 const WEBSOCKETPATH = process.env.WEBSOCKETPATH  || '/control';
+const WEBSOCKETVIDEOPATH = process.env.WEBSOCKETPATH  || '/video';
 const SECRETTOKEN = process.env.SECRETTOKEN || 'token';
 
 
@@ -38,6 +39,7 @@ const server = http.createServer(function (req, res) {
 // =================================
 // Set up the WebSocket server  
 const wss1 = new WebSocket.Server( {noServer: true });  
+const wss2 = new WebSocket.Server( {noServer: true });  
 
 
 // Create unique id
@@ -49,10 +51,18 @@ wss1.getUniqueID = function () {
 };
 
 
+// Create unique id
+wss2.getUniqueID = function () {
+  function s4() {
+      return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+  }
+  return s4() + s4() + s4();
+};
 
 
 
 // =================================
+// For handling controls ans sensors (jsons)
 wss1.on('connection', function connection(ws, request) {
 
   const parsedUrl = url.parse(request.url);  
@@ -60,7 +70,7 @@ wss1.on('connection', function connection(ws, request) {
 
   ws.id = `${wss1.getUniqueID()}-${queryParams.robotid}-${queryParams.type}`
 
-  console.log(`new connection of type ${queryParams.type} ${ws.id} <=> ${queryParams.robotid}`)
+  console.log(`new control connection of type ${queryParams.type} ${ws.id} <=> ${queryParams.robotid}`)
 
 
   ws.on('message', function message(data, isBinary) {
@@ -85,26 +95,67 @@ wss1.on('connection', function connection(ws, request) {
 });
 
 // =================================
+// For handling binary video data
+wss2.on('connection', function connection(ws, request) {
+
+  const parsedUrl = url.parse(request.url);  
+  const queryParams = querystring.parse(parsedUrl.query);  
+
+  ws.id = `${wss2.getUniqueID()}-${queryParams.robotid}-${queryParams.type}`
+
+  console.log(`new video connection of type ${queryParams.type} ${ws.id} <=> ${queryParams.robotid}`)
+
+  ws.on('message', function message(data, isBinary) {
+    wss2.clients.forEach(function each(client) {
+      if (
+        client !== ws && 
+        client.readyState === WebSocket.OPEN &&
+        client.id.split('-')[1] === ws.id.split('-')[1] &&
+        client.id.split('-')[2] !== ws.id.split('-')[2]
+      ) {
+
+        // We broadcast messages to other clients with the same robotId but not the same type
+        client.send(data, { binary: isBinary });
+      }
+    });
+  });
+
+  // Websockets
+  ws.on('error', console.error);
+  ws.on('close', function close() {  console.log(`client ${ws.id} disconnected!`)});
+  
+});
+
+
+// =================================
 server.on('upgrade', function upgrade(request, socket, head) {
 
   const parsedUrl = url.parse(request.url);  
   const { pathname } = parsedUrl;  
   const queryParams = querystring.parse(parsedUrl.query);  
   
+  const token = queryParams.token;  
+
+  if ( token !== SECRETTOKEN) {
+    console.log('InvalidToken:', token);
+    socket.destroy();
+  }
+
   if (pathname === WEBSOCKETPATH) {
 
-    const token = queryParams.token;  
-
-    if ( token !== SECRETTOKEN) {
-      console.log('InvalidToken:', token);
-      socket.destroy();
-    }
-      
     wss1.handleUpgrade(request, socket, head, function done(ws) {
       wss1.emit('connection', ws, request);
     });
 
-  } else {
+  } else if (pathname === WEBSOCKETVIDEOPATH) {
+
+    wss2.handleUpgrade(request, socket, head, function done(ws) {
+      wss2.emit('connection', ws, request);
+    });
+
+  }
+  
+  else {
     socket.destroy();
   }
 });

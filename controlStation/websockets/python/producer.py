@@ -13,9 +13,9 @@ iw,ih = 320,240
 # Replace with your Bearer token  
 token = "token"
 robotId = 1
-deviceType = "client"
+deviceType = "robot"
 
-wsurl = f"ws://192.168.128.130:8080/control?token={token}&robotid={robotId}&type={deviceType}"
+wsurl = f"ws://localhost:8080/video?token={token}&robotid={robotId}&type={deviceType}"
 
 
 # websocket.enableTrace(True)

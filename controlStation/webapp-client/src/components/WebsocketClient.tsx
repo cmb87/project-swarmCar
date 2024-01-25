@@ -7,45 +7,49 @@ export class WebsocketClient {
     private endpoint: string
     private port: number
     private hostname: string
-    private websocket: WebSocket | null
-    public data: any  = undefined;
+    public ws: WebSocket | null
 
+    // ---------------------------------------------------
     constructor(hostname: string, port: number, endpoint: string ){
         this.hostname = hostname;
         this.port = port;
         this.endpoint = endpoint;
-
-        this.websocket = null;
+        this.ws = null;
     };
 
+    // ---------------------------------------------------
     activateStream(callback:any, robotId: string | number) {
-      
         console.log("Connecting to "+this.getServerUrl(robotId));
-        this.websocket = new WebSocket(this.getServerUrl(robotId));
 
-        this.websocket.onopen = (event: Event) => { this.send("hello from React")};
-        this.websocket.onmessage = callback;
-            //this.data = `data:image/jpg;base64,${event.data}`;
+        this.ws = new WebSocket(this.getServerUrl(robotId));
 
+        this.ws.onopen = (event: Event) => { this.send("hello from React")};
+        this.ws.onmessage = callback;
+        this.ws.onerror = (event: Event) => console.log(event);
     }
 
+    // ---------------------------------------------------
     getServerUrl(robotId: string | number){
-        return `ws://192.168.128.130:8080/control?token=${TOKEN}&robotid=${robotId}&type=${DEVICETYPE}`
+        return `ws://${this.hostname}:${this.port}${this.endpoint}?token=${TOKEN}&robotid=${robotId}&type=${DEVICETYPE}`
     }
 
-
-    send(msg:string | ArrayBufferLike | Blob | ArrayBufferView) {
-      if (this.websocket !=null && this.websocket.readyState == WebSocket.OPEN) {
-        this.websocket.send(msg);
+    // ---------------------------------------------------
+    send(msg:any) {
+      
+      if (this.ws !=null && this.ws.readyState == WebSocket.OPEN) {
+        this.ws.send(msg);
+        
       } 
+
+      console.log(this.ws !=null)
     }
 
-    
+    // ---------------------------------------------------
     disconnect(){
 
-      console.log(this.websocket)
-      if (this.websocket != null) {
-        this.websocket.close();
+      console.log(this.ws)
+      if (this.ws != null) {
+        this.ws.close();
         console.log("Closing socket....")
       }
     }

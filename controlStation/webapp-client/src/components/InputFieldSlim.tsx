@@ -36,9 +36,9 @@ const label_classes =
  "md:text-left mb-1 md:mb-0 px-3 pt-1 "
 
  const input_classes = 
- "appearance-none text-l border border-purple-900 w-full pt-4 min-w-full" +
- "pb-1 px-3 text-purple-900 leading-tight focus:outline-none " +
- "focus:bg-white focus:border-purple-100 h-14 rounded"
+ "appearance-none text-l border border-blue-900 w-full pt-4 min-w-full" +
+ "pb-1 px-3 text-blue-900 leading-tight focus:outline-none " +
+ "focus:bg-white focus:border-blue-100 h-14 rounded"
 
 export default function InputFieldSlim(props:IInputFieldSlim) {
 
@@ -54,7 +54,7 @@ export default function InputFieldSlim(props:IInputFieldSlim) {
         placeholder={props.placeholder}
         onChange={(e) => props.onChange(e.target.value)}
        />
-      {props.note && <p className="text-purple-600  text-xs italic">{props.note}</p> }
+      {props.note && <p className="text-blue-600  text-xs italic">{props.note}</p> }
     </div>
   )
 }
@@ -90,7 +90,7 @@ export function InputFieldSwitch(props:IInputFieldSwitch) {
  
   const input_classes = 
   "text-l w-full pt-2 " +
-  "pb-1 px-3 text-purple-900 leading-tight focus:outline-none min-w-full" +
+  "pb-1 px-3 text-blue-900 leading-tight focus:outline-none min-w-full" +
   "focus:bg-white focus:border-se-interaction-1 h-10 rounded w-full"
 
   return (

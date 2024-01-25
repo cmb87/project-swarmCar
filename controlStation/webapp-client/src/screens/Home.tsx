@@ -1,15 +1,8 @@
 import React, {useEffect, useState, useRef } from 'react'
-
-// import Amplify from 'aws-amplify'
-// https://theskenengineering.com/building-a-react-js-app-with-aws-iot/
-
-
 import { WebsocketClient } from '../components/WebsocketClient';
-
 import { Joystick, JoystickShape } from 'react-joystick-component';
 
 import testimg from '../assets/testimage.png';
-// import demorobot from '../assets/se/robot.png';
 import {InputFieldSelectSlim}  from '../components/InputFieldSlim';
 
 
@@ -27,15 +20,19 @@ function float2int (value:number) {
 }
 
 
+const wsStreamer = new WebsocketClient('localhost', 8080, "/control" )  
+const wsVideoStreamer = new WebsocketClient('localhost', 8080, "/video" )  
+
+
 export default function Home() {
 
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<string>("offline");
   const [robotId, setRobotId] = useState<string>("1");
-  const [joystickStatus, setJoystickStatus] = useState<IJoystickStatus>({x: 0, y:0, type: "stop" ,direction: "IDLE", distance: 0.0});
 
-  const videoStreamer = new WebsocketClient('', 443, "/" )  
+  const [joystickStatus, setJoystickStatus] = useState<IJoystickStatus>({x: 0, y:0, type: "stop" ,direction: "IDLE", distance: 0.0});
+  
 
   // ----------------------------------
   const drawImage =  (imageSrc: string) => {
@@ -57,12 +54,16 @@ export default function Home() {
   // ----------------------------------
   useEffect(() => {
 
+    // Disconnect first
+    wsStreamer.disconnect();
+    wsVideoStreamer.disconnect();
+
     // if nothing is specified draw the testimage
     drawImage(testimg);
 
     // websocket callback
-    const updateImage = ( msg:any ) => {
-      setStatus("online");
+    const wsUpdateImageCB = ( msg:any ) => {
+      try {
       const reader = new FileReader();  
       reader.onload = () => {  
         drawImage(reader.result as string);
@@ -73,32 +74,33 @@ export default function Home() {
       } catch(err) {
         console.log(err);
       }
+
+      } catch (err) {
+        console.log("Error in WS CB")
+      }
     }
 
-    videoStreamer.activateStream(updateImage, robotId);
+    // Now start the stream
+    wsStreamer.activateStream((msg:any)=> console.log(msg), robotId);
+    wsVideoStreamer.activateStream(wsUpdateImageCB, robotId);
+
 
   }, [robotId])
 
   // ----------------------------------
-  useEffect(() => {
-  }, [joystickStatus])
+  useEffect(() => {}, [joystickStatus])
 
   // ----------------------------------
-  const publish = async (d:IJoystickStatus) => {
+  const publish = (d:IJoystickStatus) => {
 
-    // Create an ArrayBuffer to hold the binary data
-    const buffer = new ArrayBuffer(12); // Assuming 4 bytes 
-
-    // Create a DataView to write into the ArrayBuffer
-    const view = new DataView(buffer);
-
-    // Write the values of the struct into the DataView
-    view.setInt32(0, float2int(255*d.x),  true);
-    view.setInt32(4, float2int(255*d.y),  true);
-    view.setInt32(8, 0, true); // true for little-endian
-
+    const cmds = {
+      t: 0,
+      x: float2int(255*d.x),
+      y: float2int(255*d.y)
+    };
+    
     // Sending buffer
-    videoStreamer.send(buffer);
+    wsStreamer.send(JSON.stringify(cmds));
 
     // send buffer
     setJoystickStatus({x: d.x, y:-d.y, type: d.type , direction: d.direction, distance: 0.0});
@@ -108,12 +110,14 @@ export default function Home() {
   
   // ----------------------------------
   const publishLightOn = async () => {
-    //await PubSub.publish(`light_on/${robotId}`, {});
+
+    wsStreamer.send(JSON.stringify({t: 2,x: 0,y: 0}));
+
   }
 
   // ----------------------------------
   const publishLightOff = async () => {
-    //await PubSub.publish(`light_off/${robotId}`, {});
+    wsStreamer.send(JSON.stringify({t: 1,x: 0,y: 0}));
   }
 
   return (
@@ -142,18 +146,18 @@ export default function Home() {
                 baseColor="gray"
                 throttle={40}
                 minDistance={10}
-                stickColor="#800080"
+                stickColor="#12086F"
 
-                move={(d:any)=> publish(d)} 
-                stop={(d:any)=> publish({x: 0, y:0, type: "stop" , direction: "IDLE", distance: 0.0})}
+                move={(d:any) => publish(d)} 
+                stop={(d:any)=>  publish({x: 0, y:0, type: "stop" , direction: "IDLE", distance: 0.0})}
                 baseShape={JoystickShape.Square}
               />
 
-              <button className="bg-purple-800 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl" onClick={()=> publishLightOn()}>
+              <button className="bg-blue-800 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl" onClick={()=> publishLightOn()}>
                 Lights On
               </button>
 
-              <button className="bg-purple-300 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl" onClick={()=> publishLightOff()}>
+              <button className="bg-blue-300 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl" onClick={()=> publishLightOff()}>
                 Lights Off
               </button>
 
@@ -167,7 +171,7 @@ export default function Home() {
                 
                 ]}
                 onChange={(x:any) => {
-                  videoStreamer.disconnect();
+                  wsStreamer.disconnect();
                   setRobotId(x);
                 }}
                 value={robotId}
@@ -192,19 +196,11 @@ export default function Home() {
             {/* <img src={demorobot} alt="Demo Robot" className='w-full rounded-xl mt-8 mx-10' /> */}
 
 
-
             </div>    
 
           </div>
           
         </div>
-
-
-
-        
-        
-
-
 
 
     </div>
