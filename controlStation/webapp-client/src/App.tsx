@@ -7,6 +7,8 @@ import './App.css';
 import UserContext from "./auth/userContext";
 import Footer from './components/Footer';
 import Home from './screens/Home';
+import VideoRover from './screens/VideoRover';
+import SwarmCars from './screens/SwarmCars';
 
 
 function App() {
@@ -34,6 +36,8 @@ function App() {
                   {/* <RequestInterceptor> */}
                     <Routes>
                       <Route path="home" element={<Home/>}/>
+                      <Route path="swarm" element={<SwarmCars/>}/>
+                      <Route path="videorover" element={<VideoRover/>}/>
                     </Routes>
                   {/* </RequestInterceptor> */}
                   </main>

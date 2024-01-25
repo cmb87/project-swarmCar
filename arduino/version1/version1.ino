@@ -15,19 +15,17 @@ Note: When using MQTT and Websockets together without a sufficient delay the WSS
 
 */
 
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#include "esp_camera.h"
+#include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
 #include <ArduinoWebsockets.h>
-#include <WiFi.h>
-#include <WiFiMulti.h>
+#include <QMC5883LCompass.h>
+#include <NewPing.h>
+#include <ESP8266WiFiMulti.h>
 #include "config.h"
-#include "cameraConfig.h"
 
 
 
-WiFiMulti wifiMulti;
+ESP8266WiFiMulti wifiMulti;
 
 // Websocket
 using namespace websockets;
@@ -44,6 +42,7 @@ struct SensorStruct {
   float r;
   float h;
   float rssi;
+  float bat;
 };
 
 #define SENSORPUBLISHINTERVAL 500
@@ -51,62 +50,96 @@ struct SensorStruct {
 SensorStruct sensorState;
 
 // Motor
-#define A1A 14
-#define A1B 15 // Motor B pins
-#define B1A 13
-#define B1B 2 // Motor B pins
+#define enA D8
+#define in1 D6
+#define in2 D5
+#define in3 D0
+#define in4 D2
+#define enB D7
 
+// ------------------ MAG ------------------
+/* Assign a unique ID to this sensor at the same time */
+//QMC5883LCompass compass;
+
+
+// ------------------ HC-SR04 Ultrasonic Sensor  ------------------
+/* Assign a unique ID to this sensor at the same time */
+#define trigPin D4
+#define echoPin D3
+#define ultraSonicInterval 1000
+#define MAX_DISTANCE 300 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+
+NewPing sonar(trigPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
+
+
+// defines variables
+//long duration;
+long distance;
+long currentTimeUltrasonic = 0;
 
 // Timers
 unsigned long t0;
 unsigned long t1;
 unsigned long t2;
 
+// VoltageDivider for Battery
+// https://randomnerdtutorials.com/esp8266-adc-reading-analog-values-with-nodemcu/
+// IMPORTANT NOTE: The voltage range of ADC in ESP8266 SoC is 0V to 1V. If you want to use the ADC for 0V to 3.3V, 
+// then you have to use a voltage divider circuit as shown above. ESP-01 users, who don’t have access to ADC Pin can 
+// solder a wire to Pin 6 of ESP8266EX SoC and use it with the voltage divider.
+
+// WARNING: Do not provide more than 1V directly to the ADC Pin (TOUT – Pin 6) of ESP8266EX SoC.
+
+#define analogInPin A0  // ESP8266 Analog Pin ADC0 = A0
+
 // ======================================================
 // Motors
 // ======================================================
 
-void setMotorSpeed(int pinA, int pinB, int speed) {
-
-  int direction = 0;
+void setMotorSpeed(int pinA, int pinB, int pinEna, int speed) {
 
   if (speed>0) {
-    direction = 1;
-    analogWrite(pinA, 0);  
-    analogWrite(pinB, abs(speed));  
+    digitalWrite(pinA, LOW);
+    digitalWrite(pinB, HIGH);
+    analogWrite(pinEna, abs(speed)); // Send PWM signal to motor A
   } else if (speed<0){
-    direction = -1;
-    analogWrite(pinA, abs(speed));  
-    analogWrite(pinB, 0);  
+    digitalWrite(pinA, HIGH);
+    digitalWrite(pinB, LOW);
+    analogWrite(pinEna, abs(speed)); // Send PWM signal to motor A
   } else {
-    analogWrite(pinA, 0);
-    analogWrite(pinB, 0); 
+    digitalWrite(pinA, LOW);
+    digitalWrite(pinB, LOW);
   }
 
-  speed = abs(speed);
-  Serial.print("Motor: ");
-  Serial.print(speed);
-  Serial.print(" Direction: ");
-  Serial.print(direction);
-  Serial.println();
+
 
 }
 
 // ======================================================
-// Camera
+// Ultrasonic
 // ======================================================
-void sendFrame(){
-  //capture a frame
-  camera_fb_t * fb = esp_camera_fb_get();
-  if (!fb) {
-      Serial.println("Frame buffer could not be acquired");
-      return;
-  }
-  //replace this with your own function
-  videoSocket.sendBinary((const char *)fb->buf, fb->len);
+void measureDistance() {
+  // // Clears the trigPin
+  // digitalWrite(trigPin, LOW);
+  // delayMicroseconds(2);
+  // // Sets the trigPin on HIGH state for 10 micro seconds
+  // digitalWrite(trigPin, HIGH);
+  // delayMicroseconds(10);
+  // digitalWrite(trigPin, LOW);
+  // // Reads the echoPin, returns the sound wave travel time in microseconds
+  // duration = pulseIn(echoPin, HIGH);
+  // // Calculating the distance
+  // distance = duration * 0.034 / 2;
+  // // Prints the distance on the Serial Monitor
+  // Serial.print("Distance: ");
+  // Serial.println(distance);
+  delay(30);                      // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+  unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
+  Serial.print("Ping: ");
+  Serial.print(sonar.convert_cm(uS)); // Convert ping time to distance and print result (0 = outside set distance range, no ping echo)
+  Serial.println("cm");
+  distance = sonar.convert_cm(uS);
 
-  //return the frame buffer back to be reused
-  esp_camera_fb_return(fb);
 }
 
 // ======================================================
@@ -132,7 +165,6 @@ void onMessageCallback(WebsocketsMessage message) {
   cmds.x = doc["x"].as<long>();
   cmds.y = doc["y"].as<long>();
 
-
   // Parse the message data into the struct
   Serial.print("t: ");
   Serial.print(cmds.t);
@@ -147,8 +179,8 @@ void onMessageCallback(WebsocketsMessage message) {
     int leftPWM = constrain(cmds.y - cmds.x/2, -255, 255);
     int rightPWM = constrain(cmds.y + cmds.x/2, -255, 255);
 
-    setMotorSpeed(A1A, A1B, leftPWM);
-    setMotorSpeed(B1B, B1A, rightPWM);
+    setMotorSpeed(in2, in1, enA ,leftPWM);
+    setMotorSpeed(in4, in3, enB, rightPWM);
 
   } 
   else if (cmds.t == 1) {
@@ -212,6 +244,7 @@ void sendJsonData() {
   doc["r"] = sensorState.r;
   doc["h"] = sensorState.h;
   doc["rssi"] = sensorState.rssi;
+  doc["bat"] = sensorState.bat;
   // Convert the JSON document to a string
   String jsonString;
   serializeJson(doc, jsonString);
@@ -258,102 +291,25 @@ void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
 
 
-  // ---------------- Camera ----------------
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
+  // ------------------ HC-SR04 Ultrasonic Sensor  ------------------
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  currentTimeUltrasonic = millis();
 
-  // init with high specs to pre-allocate larger buffers
-  // FRAMESIZE_UXGA (1600 x 1200)
-  // FRAMESIZE_QVGA (320 x 240)
-  // FRAMESIZE_CIF (352 x 288)
-  // FRAMESIZE_VGA (640 x 480)
-  // FRAMESIZE_SVGA (800 x 600)
-  // FRAMESIZE_XGA (1024 x 768)
-  // FRAMESIZE_SXGA (1280 x 1024)
+  // ------------------ MAG ------------------
 
-  if(psramFound()){
-    Serial.println("PSRAM found!");
-    config.frame_size = FRAMESIZE_QVGA; // FRAMESIZE_SXGA;
-    config.jpeg_quality = 10;  //0-63 lower number means higher quality
-    config.fb_count = 2;
-  } else {
-    Serial.println("Using Default");
-    config.frame_size = FRAMESIZE_QVGA; //FRAMESIZE_SVGA;
-    config.jpeg_quality = 10;  //0-63 lower number means higher quality
-    config.fb_count = 1;
-  }
+  //compass.init();
+  //compass.setCalibration(-1700, 840, 0, 3056, -2957, 0);
+  Serial.println("Compass initialized");
   
-  // camera init
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
-    delay(1000);
-    ESP.restart();
-  }
-
-  camera_fb_t * fb = NULL;
-  fb = esp_camera_fb_get();
-  if(!fb) {
-    Serial.println("Camera capture failed");
-    delay(1000);
-    ESP.restart();
-  }
-
-  // Configure
-  sensor_t * s = esp_camera_sensor_get();
-  s->set_brightness(s, 0);     // -2 to 2
-  s->set_contrast(s, 0);       // -2 to 2
-  s->set_saturation(s, 0);     // -2 to 2
-  s->set_special_effect(s, 2); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
-  s->set_whitebal(s, 1);       // 0 = disable , 1 = enable
-  s->set_awb_gain(s, 1);       // 0 = disable , 1 = enable
-  s->set_wb_mode(s, 1);        // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
-  s->set_exposure_ctrl(s, 1);  // 0 = disable , 1 = enable
-  s->set_aec2(s, 0);           // 0 = disable , 1 = enable
-  s->set_ae_level(s, 0);       // -2 to 2
-  s->set_aec_value(s, 300);    // 0 to 1200
-  s->set_gain_ctrl(s, 1);      // 0 = disable , 1 = enable
-  s->set_agc_gain(s, 0);       // 0 to 30
-  s->set_gainceiling(s, (gainceiling_t)0);  // 0 to 6
-  s->set_bpc(s, 0);            // 0 = disable , 1 = enable
-  s->set_wpc(s, 1);            // 0 = disable , 1 = enable
-  s->set_raw_gma(s, 1);        // 0 = disable , 1 = enable
-  s->set_lenc(s, 1);           // 0 = disable , 1 = enable
-  s->set_hmirror(s, 0);        // 0 = disable , 1 = enable
-  s->set_vflip(s, 0);          // 0 = disable , 1 = enable
-  s->set_dcw(s, 1);            // 0 = disable , 1 = enable
-  s->set_colorbar(s, 0);       // 0 = disable , 1 = enable
-
-  Serial.println("Camera setup :)");
-
   // ---------------- Motors ----------------
-  pinMode(A1A, OUTPUT);
-  pinMode(A1B, OUTPUT);
-  pinMode(B1A, OUTPUT);
-  pinMode(B1B, OUTPUT);
-  digitalWrite(A1A, LOW);
-  digitalWrite(A1B, LOW);
-  digitalWrite(B1A, LOW);
-  digitalWrite(B1B, LOW);
+  pinMode(enA, OUTPUT);
+  pinMode(enB, OUTPUT);
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+
 
   Serial.println("System ready :)");
 
@@ -371,22 +327,25 @@ void loop() {
   }
 
   // Video Socket
-  if(videoSocket.available()) {
-    videoSocket.poll();
-  }
+  //if(videoSocket.available()) {
+  //  videoSocket.poll();
+  // }
 
   // State Publish
   if ( millis()-t0 > SENSORPUBLISHINTERVAL ) {
 
-    sensorState.r = 100;
+    measureDistance();
+
+    sensorState.r = distance;
     sensorState.h = 90;
     sensorState.rssi = WiFi.RSSI();
+    sensorState.bat = analogRead(analogInPin);
+
     sendJsonData();
     t0 = millis();
   }
 
-  // Camera frame
-  sendFrame();
+
   delay(10);
 
 }

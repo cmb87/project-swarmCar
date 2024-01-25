@@ -1,6 +1,12 @@
 {
     "apiKey": "lol",
     "apiBase": "/",
+    "websocket": {
+        "server": "workmasterVI",
+        "port": 8080,
+        "ssl": false
+    },
+    "websocketServer": "workmasterVI",
     "uploadAllowedFileTypes": ["JPG", "PNG", "JPEG"],
     "maxFilesUpload": 100,
     "api": {

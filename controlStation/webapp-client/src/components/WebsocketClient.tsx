@@ -36,7 +36,7 @@ export class WebsocketClient {
     // ---------------------------------------------------
     send(msg:any) {
       
-      if (this.ws !=null && this.ws.readyState == WebSocket.OPEN) {
+      if (this.ws !=null && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(msg);
         
       } 

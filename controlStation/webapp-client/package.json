@@ -10,6 +10,7 @@
     "@types/node": "^16.18.75",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
+    "aruco-marker": "^3.0.0",
     "jbinary": "^2.1.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
