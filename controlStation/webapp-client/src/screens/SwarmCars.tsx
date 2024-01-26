@@ -2,6 +2,7 @@ import React, {useEffect, useState, useRef } from 'react'
 import { WebsocketClient } from '../components/WebsocketClient';
 import { Joystick, JoystickShape } from 'react-joystick-component';
 
+
 import testimg from '../assets/camera.png';
 import {InputFieldSelectSlim}  from '../components/InputFieldSlim';
 import { IJoystickStatus, float2int } from '../components/utils';
@@ -25,7 +26,6 @@ export default function SwarmCars() {
     x: 0, y:0, type: "stop" ,direction: "IDLE", distance: 0.0
   });
   
-
   // ----------------------------------
   const drawImage =  (imageSrc: string) => {
     const canvas = canvasRef.current;  
@@ -209,7 +209,6 @@ export default function SwarmCars() {
             <div className="grid grid-cols-2 gap-4 mb-5">
 
             <div><pre>{JSON.stringify(JSON.parse(robotState), null, 2) }</pre></div>
-
 
             </div>    
 

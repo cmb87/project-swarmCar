@@ -24,7 +24,7 @@ const Header = () => {
               <div>
                 <a href="/home" className="text-2xl no-underline text-white hover:text-blue-dark font-sans font-bold">Control Center</a>
                 <br />
-                <span className="text-xs text-white">Digital Innovations.</span>
+                <span className="text-xs text-white">Digital Prototyping.</span>
               </div>
             </div>
 

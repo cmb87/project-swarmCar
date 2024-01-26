@@ -2,6 +2,8 @@
 
 [Robocar by DAquad](https://www.thingiverse.com/thing:2786243)
 
+![The rover](./imgs/image0.jpeg)
+
 
 ## ESP8266 Pinout
 
