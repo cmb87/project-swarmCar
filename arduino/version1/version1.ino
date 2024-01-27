@@ -111,8 +111,6 @@ void setMotorSpeed(int pinA, int pinB, int pinEna, int speed) {
     digitalWrite(pinB, LOW);
   }
 
-
-
 }
 
 // ======================================================
