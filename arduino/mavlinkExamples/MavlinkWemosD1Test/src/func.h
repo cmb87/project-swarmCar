@@ -144,13 +144,26 @@ void send_position() {
 
   // generate spoofed coordinates
   position.time_boot_ms = millis();
-  position.lat = random(557515000, 557515100);
-  position.lon = random(376158000, 376158100);
+  position.lat = random(513275000, 513275100);              
+  position.lon = random(64438000,  64438000);
   position.alt = random(602900, 602950);
   position.hdg = random(0, 36000);
 
   mavlink_msg_global_position_int_encode(system_id, component_id, &mvl_tx_message, &position);
   send_mavlink(&mvl_tx_message);
+}
+
+void send_parameters(mavlink_message_t *msg) {
+  mavlink_param_request_list_t params;
+  mavlink_message_t mvl_tx_message;
+
+  params.target_system = system_id;
+  params.target_component = component_id;
+
+  Serial.println("Sending Params");
+  mavlink_msg_param_request_list_encode(system_id, component_id, &mvl_tx_message, &params);
+  send_mavlink(&mvl_tx_message);
+
 }
 
 void handle_message_command_long(mavlink_message_t *msg) {
@@ -161,6 +174,7 @@ void handle_message_command_long(mavlink_message_t *msg) {
   mvl_command_ack.result = MAV_RESULT_FAILED;
   uint8_t result = MAV_RESULT_UNSUPPORTED;
 
+  // 66 REQUEST_DATA_STREAM 253 STATUSTEXT 76 COMMAND_LONG 21 PARAM_REQUEST_LIST
   mavlink_msg_command_long_decode(msg, &command_long);
 
     Serial.println("Command long control");
@@ -263,7 +277,7 @@ void parse_mavlink(uint8_t parsing_byte) {
   if (mavlink_parse_char(MAVLINK_COMM_0, parsing_byte, &mvl_rx_message, &status)) {
 
     Serial.println(mvl_rx_message.msgid);
-    
+
     switch (mvl_rx_message.msgid) {
       case MAVLINK_MSG_ID_HEARTBEAT: // MSG ID 1 - https://mavlink.io/en/messages/common.html#HEARTBEAT
         previousTimeoutMillis = millis();
@@ -283,9 +297,12 @@ void parse_mavlink(uint8_t parsing_byte) {
         handle_mission_manual_control_overwrite(&mvl_rx_message);
         break;
 
-
       case MAVLINK_MSG_ID_COMMAND_LONG: // MSG ID 76 - https://mavlink.io/en/messages/common.html#COMMAND_LONG
         handle_message_command_long(&mvl_rx_message);
+        break;
+
+      case MAVLINK_MSG_ID_PARAM_REQUEST_LIST: // MSG ID 21 - https://mavlink.io/en/messages/common.html#COMMAND_LONG
+        send_parameters(&mvl_rx_message);
         break;
 
       default:
