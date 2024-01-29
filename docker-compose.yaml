@@ -1,0 +1,22 @@
+version: "3.8"  # optional since v1.27.0
+
+services:
+
+
+  service-frontend:
+    image: service-control
+    container_name: service-control
+    restart: always
+    build:
+      context: controlStation/websockets/nodejs
+      dockerfile: ./docker/Dockerfile
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "8080:8080"
+
+
+
+networks:
+  default:

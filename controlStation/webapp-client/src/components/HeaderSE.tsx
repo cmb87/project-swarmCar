@@ -22,9 +22,9 @@ const Header = () => {
             <div className="mb-2 sm:mb-0 flex flex-row">
 
               <div>
-                <a href="/home" className="text-2xl no-underline text-white hover:text-blue-dark font-sans font-bold">Control Center</a>
+                <a href="/home" className="text-2xl no-underline text-white hover:text-blue-dark font-sans font-bold">Swarm Controller</a>
                 <br />
-                <span className="text-xs text-white">Digital Prototyping.</span>
+                <span className="text-xs text-white">Swarming.</span>
               </div>
             </div>
 

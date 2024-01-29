@@ -3,8 +3,11 @@
 // https://github.com/websockets/ws
 // https://www.npmjs.com/package/serve-static
 
+const express = require('express');
+const path = require('path');
 const WebSocket = require("ws");
 var fs = require('fs');
+const app = express();
 const http = require('http');
 const url = require('url');
 const querystring = require('querystring');  
@@ -24,15 +27,26 @@ const SECRETTOKEN = process.env.SECRETTOKEN || 'token';
 
 // =================================
 // Web server
-const server = http.createServer(function (req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method == "POST") {
-      res.end("Done");
-  } else if (req.method == "GET") {
-      res.end("Alive");
-  }
+const server = require('http').Server(app);
+
+// const server = http.createServer(function (req, res) {
+//   res.setHeader('Access-Control-Allow-Origin', '*');
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+//   if (req.method == "POST") {
+//       res.end("Done");
+//   } else if (req.method == "GET") {
+//       res.end("Alive");
+//   }
+// });
+
+// -------------------------
+app.use(express.static(path.resolve(__dirname, './build')));
+
+// -------------------------
+// All other GET requests not handled before will return our React app
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, './build', 'index.html'));
 });
 
 
